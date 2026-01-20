@@ -12,7 +12,7 @@ import java.time.LocalDate;
 public class Loyaltycard {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "loyaltyCard_Id", nullable = false)
+    @Column(name = "loyaltycard_Id", nullable = false)
     private Integer id;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
