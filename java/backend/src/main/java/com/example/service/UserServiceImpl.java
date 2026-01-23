@@ -54,6 +54,24 @@ import java.util.List;
 
         @Override
         public void deleteUser(Integer id) {
-            userRepository.deleteById(id);
+            User user = userRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("User not found"));userRepository.deleteById(id);
+            userRepository.delete(user);
         }
-}
+
+        @Override
+        public User updateUser(Integer id, User updatedUser) {
+
+            User existingUser = userRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            // Update allowed fields only
+            existingUser.setFullName(updatedUser.getFullName());
+            existingUser.setEmail(updatedUser.getEmail());
+            existingUser.setMobile(updatedUser.getMobile());
+            existingUser.setAddress(updatedUser.getAddress());
+
+            return userRepository.save(existingUser);
+        }
+
+    }

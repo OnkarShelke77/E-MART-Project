@@ -17,4 +17,7 @@ public interface CartItemRepository extends JpaRepository<Cartitem, Integer> {
 
     // (Optional) Find items by price snapshot
     List<Cartitem> findByPriceSnapshot(BigDecimal priceSnapshot);
+
+    Optional<Cartitem> findByCartIdAndProdId(Integer cartId, Integer prodId);
+
 }

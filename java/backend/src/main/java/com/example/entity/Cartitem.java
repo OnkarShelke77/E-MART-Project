@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 @Entity
 @Table(name = "cartitem")
 public class Cartitem {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "CartItem_Id", nullable = false)
@@ -16,6 +17,7 @@ public class Cartitem {
     @JoinColumn(name = "Cart_Id", nullable = false)
     private Cart cart;
 
+    // new addition to for many cartitem can have many products but each cartitem - one product.
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "Prod_Id", nullable = false)
     private Product prod;
