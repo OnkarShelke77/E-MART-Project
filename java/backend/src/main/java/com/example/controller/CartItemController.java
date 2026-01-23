@@ -9,7 +9,9 @@ import com.example.repository.CartItemRepository;
 import com.example.repository.CartRepository;
 import com.example.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -29,31 +31,78 @@ public class CartItemController {
     private ProductRepository productRepository;
 
     
+//    @PostMapping("/add")
+//    public CartItemResponseDTO addCartItem(@RequestBody CartItemRequestDTO dto) {
+//
+//        if (dto.getQuantity() == null || dto.getQuantity() <= 0) {
+//            throw new IllegalArgumentException("Quantity must be greater than 0");
+//        }
+//
+//        Cart cart = cartRepository.findById(dto.getCartId())
+//                .orElseThrow(() -> new IllegalArgumentException("Cart not found!!!"));
+//
+//
+//        Product product = productRepository.findById(dto.getProductId())
+//                .orElseThrow(() ->
+//                        new ResponseStatusException(
+//                                HttpStatus.NOT_FOUND,
+//                                "Product not found!!"
+//                        )
+//                );
+//
+//        Cartitem cartItem = new Cartitem();
+//        cartItem.setCart(cart);
+//        cartItem.setProd(product);
+//        cartItem.setQuantity(dto.getQuantity());
+//        cartItem.setPriceSnapshot(product.getMrpPrice());
+//
+//        Cartitem saved = cartItemRepository.save(cartItem);
+//
+//        return mapToResponseDTO(saved);
+//    }
+
+
     @PostMapping("/add")
     public CartItemResponseDTO addCartItem(@RequestBody CartItemRequestDTO dto) {
 
         if (dto.getQuantity() == null || dto.getQuantity() <= 0) {
-            throw new RuntimeException("Quantity must be greater than 0");
+            throw new IllegalArgumentException("Quantity must be greater than 0");
         }
 
         Cart cart = cartRepository.findById(dto.getCartId())
-                .orElseThrow(() -> new RuntimeException("Cart not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Cart not found!!!"));
 
         Product product = productRepository.findById(dto.getProductId())
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Product not found!!"
+                        )
+                );
 
-        Cartitem cartItem = new Cartitem();
-        cartItem.setCart(cart);
-        cartItem.setProd(product);
-        cartItem.setQuantity(dto.getQuantity());
-        cartItem.setPriceSnapshot(product.getMrpPrice());
+        // 🔑 CHECK IF PRODUCT ALREADY EXISTS IN CART
+        Cartitem cartItem = cartItemRepository
+                .findByCartIdAndProdId(cart.getId(), product.getId())
+                .orElse(null);
+
+        if (cartItem != null) {
+            // ✅ DUPLICATE PRODUCT → INCREASE QUANTITY
+            cartItem.setQuantity(cartItem.getQuantity() + dto.getQuantity());
+        } else {
+            // ✅ NEW PRODUCT
+            cartItem = new Cartitem();
+            cartItem.setCart(cart);
+            cartItem.setProd(product);
+            cartItem.setQuantity(dto.getQuantity());
+            cartItem.setPriceSnapshot(product.getMrpPrice());
+        }
 
         Cartitem saved = cartItemRepository.save(cartItem);
-
         return mapToResponseDTO(saved);
     }
 
-    
+
+
     @GetMapping("/cart/{cartId}")
     public List<CartItemResponseDTO> getItemsByCart(@PathVariable Integer cartId) {
 

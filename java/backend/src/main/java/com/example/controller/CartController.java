@@ -5,7 +5,9 @@ import com.example.entity.User;
 import com.example.repository.CartRepository;
 import com.example.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -18,7 +20,6 @@ public class CartController {
 
     @Autowired
     private UserRepository userRepository;
-
    
     @PostMapping("/create/{userId}")
     public Cart createCart(@PathVariable Integer userId) {
@@ -35,11 +36,24 @@ public class CartController {
 
 
 
+//    @GetMapping("/{cartId}")
+//    public Cart getCartById(@PathVariable Integer cartId) {
+//        return cartRepository.findById(cartId)
+//                .orElseThrow(() -> new RuntimeException("Cart not found"));
+//    }
+
+
     @GetMapping("/{cartId}")
     public Cart getCartById(@PathVariable Integer cartId) {
         return cartRepository.findById(cartId)
-                .orElseThrow(() -> new RuntimeException("Cart not found"));
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Cart not found"
+                        )
+                );
     }
+
 
 
 
@@ -47,6 +61,7 @@ public class CartController {
     public List<Cart> getAllCarts() {
         return cartRepository.findAll();
     }
+
 
     @PutMapping("/update/{cartId}")
     public Cart updateCart(@PathVariable Integer cartId,
@@ -60,7 +75,7 @@ public class CartController {
         return cartRepository.save(cart);
     }
 
-    
+
     @DeleteMapping("/delete/{cartId}")
     public String deleteCart(@PathVariable Integer cartId) {
 
