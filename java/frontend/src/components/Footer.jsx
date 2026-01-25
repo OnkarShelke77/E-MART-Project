@@ -1,5 +1,6 @@
 import React from 'react';
-import styles from './Footer.module.css';
+import styles from '../styles/Footer.module.css';
+import { FaFacebookF, FaTwitter, FaInstagram, FaLinkedinIn } from 'react-icons/fa';
 
 const Footer = () => {
     return (
@@ -34,10 +35,10 @@ const Footer = () => {
                 <div className={styles.column}>
                     <h3>Follow Us</h3>
                     <div className={styles.socialIcons}>
-                        <div className={styles.socialIcon}>F</div>
-                        <div className={styles.socialIcon}>T</div>
-                        <div className={styles.socialIcon}>I</div>
-                        <div className={styles.socialIcon}>L</div>
+                        <div className={styles.socialIcon}><FaFacebookF /></div>
+                        <div className={styles.socialIcon}><FaTwitter /></div>
+                        <div className={styles.socialIcon}><FaInstagram /></div>
+                        <div className={styles.socialIcon}><FaLinkedinIn /></div>
                     </div>
                 </div>
             </div>
