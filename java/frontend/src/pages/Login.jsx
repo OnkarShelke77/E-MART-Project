@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
+import { GoogleLogin } from "@react-oauth/google";   // 🔥 VERY IMPORTANT
 import "../styles/Login.css";
 
 function Login() {
   const [isFlipped, setIsFlipped] = useState(false);
-  const [containerHeight, setContainerHeight] = useState(600); // Default start height
+  const [containerHeight, setContainerHeight] = useState(600);
 
   const frontRef = useRef(null);
   const backRef = useRef(null);
@@ -26,21 +27,17 @@ function Login() {
     const updateHeight = () => {
       const currentRef = isFlipped ? backRef : frontRef;
       if (currentRef.current) {
-        // Add some padding/buffer if needed, or just use offsetHeight
         setContainerHeight(currentRef.current.offsetHeight);
       }
     };
 
-    // Small timeout to ensure DOM is ready/transitions start
     const timer = setTimeout(updateHeight, 50);
-
-    // Also update on resize
-    window.addEventListener('resize', updateHeight);
+    window.addEventListener("resize", updateHeight);
 
     return () => {
       clearTimeout(timer);
-      window.removeEventListener('resize', updateHeight);
-    }
+      window.removeEventListener("resize", updateHeight);
+    };
   }, [isFlipped]);
 
   const validateForm = () => {
@@ -100,18 +97,15 @@ function Login() {
       console.log("Register Mobile:", regMobile);
       console.log("Register Address:", regAddress);
       console.log("Register Password:", regPassword);
-      // Proceed with API call
     }
   };
 
   return (
     <div className="login-container">
       <div className={`flip-container ${isFlipped ? "flipped" : ""}`}>
-        <div
-          className="flipper"
-          style={{ height: `${containerHeight}px` }}
-        >
-          {/* Front Side - Login */}
+        <div className="flipper" style={{ height: `${containerHeight}px` }}>
+
+          {/* 🔹 FRONT - LOGIN */}
           <div className="front" ref={frontRef}>
             <div className="login-card">
               <div className="login-header">
@@ -121,9 +115,8 @@ function Login() {
 
               <form onSubmit={handleLoginSubmit} className="login-form">
                 <div className="input-group">
-                  <label htmlFor="email">Email Address</label>
+                  <label>Email Address</label>
                   <input
-                    id="email"
                     type="email"
                     placeholder="name@example.com"
                     value={email}
@@ -133,9 +126,8 @@ function Login() {
                 </div>
 
                 <div className="input-group">
-                  <label htmlFor="password">Password</label>
+                  <label>Password</label>
                   <input
-                    id="password"
                     type="password"
                     placeholder="Enter your password"
                     value={password}
@@ -147,17 +139,34 @@ function Login() {
                 <button type="submit" className="login-btn">
                   Sign In
                 </button>
+
+                <div className="divider">
+                  <span>OR</span>
+                </div>
+
+                {/* 🔥 REAL GOOGLE LOGIN BUTTON */}
+                <div style={{ display: "flex", justifyContent: "center" }}>
+                  <GoogleLogin
+                    onSuccess={(credentialResponse) => {
+                      console.log("✅ Google Token:", credentialResponse.credential);
+                    }}
+                    onError={() => {
+                      console.log("❌ Google Login Failed");
+                    }}
+                  />
+                </div>
               </form>
 
               <div className="login-footer">
                 <p className="register-text">
-                  New to E-Mart? <span onClick={() => setIsFlipped(true)}>Create an account</span>
+                  New to E-Mart?{" "}
+                  <span onClick={() => setIsFlipped(true)}>Create an account</span>
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Back Side - Registration */}
+          {/* 🔹 BACK - REGISTER */}
           <div className="back" ref={backRef}>
             <div className="login-card">
               <div className="login-header">
@@ -167,11 +176,9 @@ function Login() {
 
               <form onSubmit={handleRegisterSubmit} className="login-form">
                 <div className="input-group">
-                  <label htmlFor="reg-name">Full Name</label>
+                  <label>Full Name</label>
                   <input
-                    id="reg-name"
                     type="text"
-                    placeholder="John Doe"
                     value={regName}
                     onChange={(e) => setRegName(e.target.value)}
                   />
@@ -179,11 +186,9 @@ function Login() {
                 </div>
 
                 <div className="input-group">
-                  <label htmlFor="reg-email">Email Address</label>
+                  <label>Email</label>
                   <input
-                    id="reg-email"
                     type="email"
-                    placeholder="name@example.com"
                     value={regEmail}
                     onChange={(e) => setRegEmail(e.target.value)}
                   />
@@ -191,11 +196,9 @@ function Login() {
                 </div>
 
                 <div className="input-group">
-                  <label htmlFor="reg-mobile">Mobile Number</label>
+                  <label>Mobile</label>
                   <input
-                    id="reg-mobile"
                     type="tel"
-                    placeholder="1234567890"
                     value={regMobile}
                     onChange={(e) => setRegMobile(e.target.value)}
                   />
@@ -203,11 +206,9 @@ function Login() {
                 </div>
 
                 <div className="input-group">
-                  <label htmlFor="reg-address">Address</label>
+                  <label>Address</label>
                   <input
-                    id="reg-address"
                     type="text"
-                    placeholder="123 Main St, City"
                     value={regAddress}
                     onChange={(e) => setRegAddress(e.target.value)}
                   />
@@ -215,11 +216,9 @@ function Login() {
                 </div>
 
                 <div className="input-group">
-                  <label htmlFor="reg-password">Password</label>
+                  <label>Password</label>
                   <input
-                    id="reg-password"
                     type="password"
-                    placeholder="Create a password"
                     value={regPassword}
                     onChange={(e) => setRegPassword(e.target.value)}
                   />
@@ -227,15 +226,15 @@ function Login() {
                 </div>
 
                 <div className="input-group">
-                  <label htmlFor="confirm-password">Confirm Password</label>
+                  <label>Confirm Password</label>
                   <input
-                    id="confirm-password"
                     type="password"
-                    placeholder="Confirm your password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                   />
-                  {errors.confirmPassword && <span className="error-message">{errors.confirmPassword}</span>}
+                  {errors.confirmPassword && (
+                    <span className="error-message">{errors.confirmPassword}</span>
+                  )}
                 </div>
 
                 <button type="submit" className="login-btn">
@@ -245,11 +244,13 @@ function Login() {
 
               <div className="login-footer">
                 <p className="register-text">
-                  Already have an account? <span onClick={() => setIsFlipped(false)}>Login</span>
+                  Already have an account?{" "}
+                  <span onClick={() => setIsFlipped(false)}>Login</span>
                 </p>
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>

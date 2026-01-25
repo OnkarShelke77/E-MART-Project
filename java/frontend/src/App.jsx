@@ -8,10 +8,10 @@ import Login from './pages/Login';
 function App() {
   return (
     <div className="App">
-      {/* <Login /> */}
-      <Navbar />
+      <Login />
+      {/* <Navbar />
       <HomePage />
-      <Footer />
+      <Footer /> */}
     </div>
   );
 }
