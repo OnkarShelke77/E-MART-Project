@@ -1,55 +1,43 @@
 package com.example.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "users")
+@Table(name = "users", uniqueConstraints = {
+        @UniqueConstraint(columnNames = "email"),
+        @UniqueConstraint(columnNames = "mobile")
+})
 public class User {
-    public Cart getCart() {
-        return cart;
-    }
-
-    public void setCart(Cart cart) {
-        this.cart = cart;
-    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
     private Integer id;
 
-    @OneToOne(
-            mappedBy = "user",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-//            fetch = FetchType.LAZY
-    )
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private Cart cart;
 
     @Column(name = "full_name", nullable = false, length = 100)
     private String fullName;
 
-    @Column(name = "email", nullable = false, length = 100)
+    @Column(name = "email", nullable = false, length = 100, unique = true)
     private String email;
 
-    @Column(name = "mobile", length = 15)
+    @Column(name = "mobile", length = 15, unique = true)
     private String mobile;
 
+    // 🔐 NEVER send password to frontend
+    @JsonIgnore
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
     @Column(name = "address", length = 255)
     private String address;
 
-    public String getAddress() {
-        return address;
-    }
-
-    public void setAddress(String address) {
-        this.address = address;
-    }
+    // -------- GETTERS & SETTERS --------
 
     public Integer getId() {
         return id;
@@ -57,6 +45,14 @@ public class User {
 
     public void setId(Integer id) {
         this.id = id;
+    }
+
+    public Cart getCart() {
+        return cart;
+    }
+
+    public void setCart(Cart cart) {
+        this.cart = cart;
     }
 
     public String getFullName() {
@@ -91,4 +87,11 @@ public class User {
         this.passwordHash = passwordHash;
     }
 
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
 }

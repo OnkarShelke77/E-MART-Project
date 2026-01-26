@@ -1,4 +1,6 @@
 import React from 'react';
+
+import Navbar from '../components/Navbar';
 import CategoryBar from '../components/CategoryBar';
 import AdBanner from '../components/AdBanner';
 import styles from '../styles/HomePage.module.css';
