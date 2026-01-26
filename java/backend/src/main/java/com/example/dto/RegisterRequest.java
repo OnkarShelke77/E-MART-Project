@@ -6,9 +6,7 @@ public class RegisterRequest {
     private String email;
     private String mobile;
     private String address;
-    private String password; // 👈 plain password comes ONLY here
-
-    // -------- GETTERS & SETTERS --------
+    private String password;
 
     public String getFullName() {
         return fullName;

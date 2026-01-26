@@ -1,4 +1,5 @@
 import React from 'react';
+
 import Navbar from '../components/Navbar';
 import CategoryBar from '../components/CategoryBar';
 import AdBanner from '../components/AdBanner';

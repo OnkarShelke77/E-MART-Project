@@ -1,17 +1,17 @@
 package com.example.service;
 
+import com.example.dto.RegisterRequest;
 import com.example.entity.User;
 import com.example.exception.GlobalExceptionHandler;
 import com.example.repository.UserRepository;
-import org.springframework.stereotype.Service;
-import com.example.dto.RegisterRequest;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-class UserServiceImpl implements UserService {
+public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -20,6 +20,7 @@ class UserServiceImpl implements UserService {
         this.userRepository = userRepository;
     }
 
+    // 🔹 Check duplicate email & mobile
     private void validateUniqueFields(User user) {
 
         userRepository.findByEmail(user.getEmail())
@@ -34,6 +35,8 @@ class UserServiceImpl implements UserService {
                             "Mobile number already exists: " + user.getMobile());
                 });
     }
+
+    // ---------------- NORMAL CRUD ----------------
 
     @Override
     public User saveUser(User user) {
@@ -56,8 +59,8 @@ class UserServiceImpl implements UserService {
     public void deleteUser(Integer id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        userRepository.deleteById(id);
-        userRepository.delete(user);
+
+        userRepository.delete(user); // 🔥 delete only once
     }
 
     @Override
@@ -66,7 +69,6 @@ class UserServiceImpl implements UserService {
         User existingUser = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Update allowed fields only
         existingUser.setFullName(updatedUser.getFullName());
         existingUser.setEmail(updatedUser.getEmail());
         existingUser.setMobile(updatedUser.getMobile());
@@ -75,6 +77,9 @@ class UserServiceImpl implements UserService {
         return userRepository.save(existingUser);
     }
 
+    // ---------------- 🔥 REGISTER USER ----------------
+
+    @Override
     public User registerUser(RegisterRequest request) {
 
         User user = new User();
@@ -84,14 +89,31 @@ class UserServiceImpl implements UserService {
         user.setMobile(request.getMobile());
         user.setAddress(request.getAddress());
 
-        // 🔐 HASH THE PASSWORD
+        // 🔐 HASH PASSWORD
         String hashedPassword = passwordEncoder.encode(request.getPassword());
         user.setPasswordHash(hashedPassword);
 
-        // check duplicate email & mobile
+        // check duplicates
         validateUniqueFields(user);
 
-        // save to DB
         return userRepository.save(user);
+    }
+
+    // ---------------- 🔐 LOGIN USER ----------------
+
+    @Override
+    public User loginUser(String email, String password) {
+
+        // find user by email
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+
+        // 🔐 check password with BCrypt
+        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
+            throw new RuntimeException("Invalid email or password");
+        }
+
+        // 🎉 login success
+        return user;
     }
 }

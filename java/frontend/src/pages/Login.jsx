@@ -1,10 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { GoogleLogin } from "@react-oauth/google";   // 🔥 VERY IMPORTANT
 import "../styles/Login.css";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 function Login() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [containerHeight, setContainerHeight] = useState(600);
+  const navigate = useNavigate();
 
   const frontRef = useRef(null);
   const backRef = useRef(null);
@@ -83,22 +86,90 @@ function Login() {
     return isValid;
   };
 
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    console.log("Login Email:", email);
-    console.log("Login Password:", password);
-  };
 
-  const handleRegisterSubmit = (e) => {
-    e.preventDefault();
-    if (validateForm()) {
-      console.log("Register Name:", regName);
-      console.log("Register Email:", regEmail);
-      console.log("Register Mobile:", regMobile);
-      console.log("Register Address:", regAddress);
-      console.log("Register Password:", regPassword);
+    try {
+      const response = await fetch("http://localhost:8080/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password,
+        }),
+      });
+
+      if (!response.ok) {
+        const msg = await response.text();
+        alert("❌ Login failed: " + msg);
+        return;
+      }
+
+      const user = await response.json();
+      console.log("✅ Login Success:", user);
+
+      alert("🎉 Login Successful!");
+
+      // save user info
+      localStorage.setItem("user", JSON.stringify(user));
+
+      // 🔥 PERFECT REDIRECT
+      navigate("/home");
+
+    } catch (error) {
+      console.error("❌ Error during login:", error);
+      alert("Server error. Please try again later.");
     }
   };
+
+
+  const handleRegisterSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateForm()) return;
+
+    const userData = {
+      fullName: regName,
+      email: regEmail,
+      mobile: regMobile,
+      address: regAddress,
+      password: regPassword
+    };
+
+    try {
+      const response = await axios.post(
+        "http://localhost:8080/auth/register",
+        userData
+      );
+
+      console.log("✅ Registered User:", response.data);
+      alert("🎉 Registration successful!");
+
+      // optional: flip back to login
+      setIsFlipped(false);
+
+      // clear form
+      setRegName("");
+      setRegEmail("");
+      setRegMobile("");
+      setRegAddress("");
+      setRegPassword("");
+      setConfirmPassword("");
+
+    } catch (error) {
+      console.error("❌ Error:", error);
+
+      if (error.response) {
+        alert("❌ " + error.response.data.message || "Registration failed");
+      } else {
+        alert("❌ Server error. Please try again later.");
+      }
+    }
+  };
+
+
 
   return (
     <div className="login-container">
