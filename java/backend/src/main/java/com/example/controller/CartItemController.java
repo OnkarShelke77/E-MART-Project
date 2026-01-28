@@ -8,8 +8,6 @@ import com.example.entity.Product;
 import com.example.repository.CartItemRepository;
 import com.example.repository.CartRepository;
 import com.example.repository.ProductRepository;
-import com.example.repository.UserRepository;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -32,9 +30,6 @@ public class CartItemController {
 
     @Autowired
     private ProductRepository productRepository;
-    
-    @Autowired
-    private UserRepository userRepository;
 
 
 //    @PostMapping("/add")
@@ -85,20 +80,8 @@ public class CartItemController {
 
         String email = authentication.getName();
 
-//        Cart cart = cartRepository.findByUser_Email(email)
-//                .orElseThrow(() -> new RuntimeException("Cart not found"));
         Cart cart = cartRepository.findByUser_Email(email)
-        	    .orElseGet(() -> {
-        	        Cart newCart = new Cart();
-        	        newCart.setUser(
-        	            userRepository.findByEmail(email)
-        	              .orElseThrow(() -> new RuntimeException("User not found"))
-        	        );
-        	        newCart.setIsActive('Y');
-        	        return cartRepository.save(newCart);
-        	    });
-
-
+                .orElseThrow(() -> new RuntimeException("Cart not found"));
 
         Product product = productRepository.findById(dto.getProductId())
                 .orElseThrow(() -> new RuntimeException("Product not found"));
@@ -141,17 +124,10 @@ public class CartItemController {
     @PutMapping("/update/{id}")
     public CartItemResponseDTO updateCartItem(
             @PathVariable Integer id,
-            @RequestBody CartItemRequestDTO dto,
-            Authentication authentication) {
+            @RequestBody CartItemRequestDTO dto) {
 
         Cartitem cartItem = cartItemRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("CartItem not found"));
-
-        // Security check: Verify item belongs to logged-in user
-        String email = authentication.getName();
-        if (!cartItem.getCart().getUser().getEmail().equals(email)) {
-            throw new RuntimeException("Unauthorized to update this cart item");
-        }
 
         if (dto.getQuantity() == null || dto.getQuantity() <= 0) {
             throw new RuntimeException("Quantity must be greater than 0");
@@ -162,17 +138,13 @@ public class CartItemController {
         return mapToResponseDTO(cartItemRepository.save(cartItem));
     }
 
+    // delete without jwt
+   
     @DeleteMapping("/delete/{id}")
-    public String deleteCartItem(@PathVariable Integer id, Authentication authentication) {
+    public String deleteCartItem(@PathVariable Integer id) {
 
         Cartitem cartItem = cartItemRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("CartItem not found"));
-
-        // Security check: Verify item belongs to logged-in user
-        String email = authentication.getName();
-        if (!cartItem.getCart().getUser().getEmail().equals(email)) {
-            throw new RuntimeException("Unauthorized to delete this cart item");
-        }
 
         cartItemRepository.delete(cartItem);
         return "CartItem deleted successfully";

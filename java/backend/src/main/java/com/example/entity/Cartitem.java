@@ -8,23 +8,24 @@ import java.math.BigDecimal;
 @Table(name = "cartitem")
 public class Cartitem {
 
-	@Id
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "cart_item_id")
+    @Column(name = "CartItem_Id", nullable = false)
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "cart_id")
+    @JoinColumn(name = "Cart_Id", nullable = false)
     private Cart cart;
 
+    // new addition to for many cartitem can have many products but each cartitem - one product.
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "prod_id")
+    @JoinColumn(name = "Prod_Id", nullable = false)
     private Product prod;
 
-    @Column(name = "quantity", nullable = false)
+    @Column(name = "Quantity", nullable = false)
     private Integer quantity;
 
-    @Column(name = "price_snapshot", nullable = false, precision = 10, scale = 2)
+    @Column(name = "PriceSnapshot", nullable = false, precision = 10, scale = 2)
     private BigDecimal priceSnapshot;
 
     public Integer getId() {
