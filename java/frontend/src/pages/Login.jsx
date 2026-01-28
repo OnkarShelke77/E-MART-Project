@@ -1,14 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import { GoogleLogin } from "@react-oauth/google";
-import {jwtDecode} from "jwt-decode"; // 🔥 IMPORTANT
+import { jwtDecode } from "jwt-decode"; // 🔥 IMPORTANT
 import "../styles/Login.css";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { useCart } from "../context/CartContext";
 
 function Login() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [containerHeight, setContainerHeight] = useState(600);
   const navigate = useNavigate();
+  const { refreshCart } = useCart();
 
   const frontRef = useRef(null);
   const backRef = useRef(null);
@@ -25,6 +27,15 @@ function Login() {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const [errors, setErrors] = useState({});
+
+  // redirection logic if already logged in
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const user = localStorage.getItem("user");
+    if (token && user) {
+      navigate("/home");
+    }
+  }, [navigate]);
 
   // Update height when flip state changes
   useEffect(() => {
@@ -107,6 +118,9 @@ function Login() {
       // 🔥 SAVE USER + TOKEN
       localStorage.setItem("user", JSON.stringify(user));
       localStorage.setItem("token", user.token);
+
+      // 🔄 REFRESH CART
+      await refreshCart();
 
       navigate("/home");
 
@@ -243,6 +257,9 @@ function Login() {
                         // 🔥 SAVE USER + TOKEN
                         localStorage.setItem("user", JSON.stringify(response.data));
                         localStorage.setItem("token", response.data.token);
+
+                        // 🔄 REFRESH CART
+                        await refreshCart();
 
                         navigate("/home");
 

@@ -33,12 +33,12 @@ const HomePage = () => {
 
     // Featured products
     const products = [
-        { id: 1, name: 'Wireless Headphones', price: '$99.99', img: '/images/wireless_headphones.png' },
-        { id: 2, name: 'Smart Watch', price: '$149.99', img: '/images/smart_watch.png' },
-        { id: 3, name: 'Running Shoes', price: '$79.99', img: '/images/running_shoes.png' },
-        { id: 4, name: 'Laptop Backpack', price: '$45.00', img: '/images/laptop_backpack.png' },
-        { id: 5, name: 'Gaming Mouse', price: '$59.99', img: '/images/gaming_mouse.png' },
-        { id: 6, name: 'Bluetooth Speaker', price: '$39.99', img: '/images/bluetooth_speaker.png' }
+        { id: 101, name: 'Wireless Headphones', price: 99.99, mrpPrice: 110.00, cardholderPrice: 99.99, pointsToBeRedeem: 1000, img: '/images/wireless_headphones.png' },
+        { id: 102, name: 'Smart Watch', price: 149.99, mrpPrice: 165.00, cardholderPrice: 149.99, pointsToBeRedeem: 1500, img: '/images/smart_watch.png' },
+        { id: 103, name: 'Running Shoes', price: 79.99, mrpPrice: 90.00, cardholderPrice: 79.99, pointsToBeRedeem: 800, img: '/images/running_shoes.png' },
+        { id: 104, name: 'Laptop Backpack', price: 45.00, mrpPrice: 50.00, cardholderPrice: 45.00, pointsToBeRedeem: 450, img: '/images/laptop_backpack.png' },
+        { id: 105, name: 'Gaming Mouse', price: 59.99, mrpPrice: 65.00, cardholderPrice: 59.99, pointsToBeRedeem: 600, img: '/images/gaming_mouse.png' },
+        { id: 106, name: 'Bluetooth Speaker', price: 39.99, mrpPrice: 45.00, cardholderPrice: 39.99, pointsToBeRedeem: 400, img: '/images/bluetooth_speaker.png' }
     ];
 
     return (
@@ -148,7 +148,7 @@ const HomePage = () => {
                                 <div className={styles.prodInfo}>
                                     <h3 className={styles.prodName}>{prod.name}</h3>
                                     <div className={styles.prodPriceRow}>
-                                        <div className={styles.prodPrice}>{prod.price}</div>
+                                        <div className={styles.prodPrice}>₹{prod.price}</div>
                                         {/* Rating */}
                                         <div className={styles.rating}>
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="#fbbf24" stroke="#fbbf24" strokeWidth="2">
@@ -162,7 +162,10 @@ const HomePage = () => {
                                         onClick={() => addToCart({
                                             id: prod.id,
                                             name: prod.name,
-                                            price: parseFloat(prod.price.replace('$', '')),
+                                            price: prod.price,
+                                            mrpPrice: prod.mrpPrice,
+                                            cardholderPrice: prod.cardholderPrice,
+                                            pointsToBeRedeem: prod.pointsToBeRedeem,
                                             image: prod.img,
                                             quantity: 1
                                         })}

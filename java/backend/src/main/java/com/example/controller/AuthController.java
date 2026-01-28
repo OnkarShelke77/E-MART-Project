@@ -11,6 +11,8 @@ import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import com.example.service.EmailService; // Added by Hamzah
+
 
 @RestController
 @RequestMapping("/auth")
@@ -24,6 +26,10 @@ public class AuthController {
     private EmailService emailService;   // ✅ Inject EmailService
 
     private final UserService userService;
+
+    @Autowired
+    private EmailService emailService; // Added by Hamzah
+
 
     public AuthController(UserService userService) {
         this.userService = userService;
