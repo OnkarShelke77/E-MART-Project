@@ -6,53 +6,53 @@ import styles from "../styles/HomePage.module.css";
 // 🔥 CART CONTEXT
 import { useCart } from "../context/CartContext";
 
-const BrowseCategory = () => {
+// const BrowseCategory = () => {
 
-    const { catId } = useParams();     // C001, EP001, etc
-    const navigate = useNavigate();
+//     const { catId } = useParams();     // C001, EP001, etc
+//     const navigate = useNavigate();
 
-    const { addToCart, cartItems } = useCart();   // 🔥 GET CART ITEMS TOO
+//     const { addToCart, cartItems } = useCart();   // 🔥 GET CART ITEMS TOO
 
-    const [products, setProducts] = useState([]);
-    const [subCategories, setSubCategories] = useState([]);
-    const [hasSubCategories, setHasSubCategories] = useState(false);
-    const [loading, setLoading] = useState(true);
+//     const [products, setProducts] = useState([]);
+//     const [subCategories, setSubCategories] = useState([]);
+//     const [hasSubCategories, setHasSubCategories] = useState(false);
+//     const [loading, setLoading] = useState(true);
 
-    // Check if product is in cart
-    const isInCart = (productId) => {
-        return cartItems.some(item => item.id === productId);
-    };
+//     // Check if product is in cart
+//     const isInCart = (productId) => {
+//         return cartItems.some(item => item.id === productId);
+//     };
 
-    useEffect(() => {
-        setLoading(true);
+//     useEffect(() => {
+//         setLoading(true);
 
-        axios
-            .get(`http://localhost:8080/api/catalog/categories/${catId}`)
-            .then(res => {
-                const data = res.data;
+//         axios
+//             .get(`http://localhost:8080/api/catalog/categories/${catId}`)
+//             .then(res => {
+//                 const data = res.data;
 
-                setHasSubCategories(data.hasSubCategories);
+//                 setHasSubCategories(data.hasSubCategories);
 
-                if (data.hasSubCategories) {
-                    setSubCategories(data.subCategories || []);
-                    setProducts([]);
-                } else {
-                    setProducts(data.products || []);
-                    setSubCategories([]);
-                }
+//                 if (data.hasSubCategories) {
+//                     setSubCategories(data.subCategories || []);
+//                     setProducts([]);
+//                 } else {
+//                     setProducts(data.products || []);
+//                     setSubCategories([]);
+//                 }
 
-                setLoading(false);
-            })
-            .catch(err => {
-                console.error("Error loading category:", err);
-                setLoading(false);
-            });
+//                 setLoading(false);
+//             })
+//             .catch(err => {
+//                 console.error("Error loading category:", err);
+//                 setLoading(false);
+//             });
 
-    }, [catId]);
+//     }, [catId]);
 
-    if (loading) {
-        return <h2 style={{ textAlign: "center", marginTop: "40px" }}>Loading...</h2>;
-    }
+//     if (loading) {
+//         return <h2 style={{ textAlign: "center", marginTop: "40px" }}>Loading...</h2>;
+//     }
 
 const BrowseCategory = () => {
   const { catId } = useParams(); // Example: C001, MOB001 etc
@@ -316,5 +316,6 @@ const BrowseCategory = () => {
     </div>
   );
 };
+
 
 export default BrowseCategory;

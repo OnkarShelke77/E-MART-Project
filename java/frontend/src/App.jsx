@@ -9,6 +9,7 @@ import HomePage from './pages/HomePage';
 import Login from './pages/Login';
 import CartPage from './pages/CartPage';
 import BrowseCategory from './pages/BrowseCategory';
+import CheckoutAddress from './pages/CheckoutAddress';
 
 // 🔥 CART CONTEXT
 import { CartProvider } from './context/CartContext';
@@ -43,11 +44,15 @@ function App() {
 
           <Routes>
             {/* AUTH */}
-            <Route path="/" element={<Login />} />
+            <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<Login />} />
 
             {/* HOME */}
             <Route path="/home" element={<HomePage />} />
+
+            {/* checkoutaddress */}
+            <Route path="/checkout/address" element={<CheckoutAddress />} />
+
 
             {/* CATEGORY BROWSE */}
             <Route path="/browse/:catId" element={<BrowseCategory />} />

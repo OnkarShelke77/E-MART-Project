@@ -27,8 +27,8 @@ public class AuthController {
 
     private final UserService userService;
 
-    @Autowired
-    private EmailService emailService; // Added by Hamzah
+    // @Autowired
+    // private EmailService emailService; // Added by Hamzah
 
 
     public AuthController(UserService userService) {
