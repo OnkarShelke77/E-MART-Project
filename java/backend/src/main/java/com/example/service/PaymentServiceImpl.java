@@ -54,12 +54,8 @@ public class PaymentServiceImpl implements PaymentService {
         // 2️⃣ FETCH ACTIVE CART
         Cart cart = cartRepository
                 .findByUser_IdAndIsActive(dto.getUserId(), 'Y')
-                .orElseGet(() -> {
-                    Cart newCart = new Cart();
-                    newCart.setUser(user);
-                    newCart.setIsActive('Y');
-                    return cartRepository.save(newCart);
-                });
+                .orElseThrow(() -> new RuntimeException("Active cart not found"));
+
         // 3️⃣ FETCH CART ITEMS
         List<Cartitem> cartItems = cartItemRepository.findByCart_Id(cart.getId());
 
