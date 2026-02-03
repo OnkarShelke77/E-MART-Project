@@ -5,7 +5,12 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
+using System.IdentityModel.Tokens.Jwt;
+
 var builder = WebApplication.CreateBuilder(args);
+
+// Prevent mapping sub to NameIdentifier
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -17,7 +22,7 @@ builder.Services.AddDbContext<EMartDbContext>(options =>
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var key = Encoding.ASCII.GetBytes(jwtSettings["Key"] ?? "emart_super_secret_key_1234567890_antigravity");
+var key = Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Key"] ?? "emart_super_secret_key_1234567890_antigravity");
 
 builder.Services.AddAuthentication(options =>
 {
@@ -44,6 +49,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<ICartService, CartService>();
 
 var app = builder.Build();
 

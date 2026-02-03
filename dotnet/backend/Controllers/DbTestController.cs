@@ -48,7 +48,22 @@ namespace EMart.Controllers
                     .Select(p => new { p.Id, p.ProdName, p.CategoryId })
                     .ToListAsync();
 
-                return Ok(new { categories, products });
+                // Raw SQL to inspect actual column names
+                var cartItemColumns = new List<string>();
+                using (var command = _context.Database.GetDbConnection().CreateCommand())
+                {
+                    command.CommandText = "SHOW COLUMNS FROM cartitem";
+                    _context.Database.OpenConnection();
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (reader.Read())
+                        {
+                            cartItemColumns.Add(reader.GetString(0)); // Field name
+                        }
+                    }
+                }
+
+                return Ok(new { categories, products, cartItemColumns });
             }
             catch (Exception ex) { return StatusCode(500, ex.Message); }
         }
