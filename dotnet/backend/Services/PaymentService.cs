@@ -60,29 +60,29 @@ namespace EMart.Services
                 await _context.SaveChangesAsync();
 
                 // Payment success → send mail + invoice
-                if ("SUCCESS".Equals(payment.PaymentStatus, StringComparison.OrdinalIgnoreCase))
-                {
-                    var order =
-                        await _context.Ordermasters.FirstOrDefaultAsync(o =>
-                            o.Id == payment.OrderId
-                        ) ?? throw new Exception("Order not found");
+                // if ("SUCCESS".Equals(payment.PaymentStatus, StringComparison.OrdinalIgnoreCase))
+                // {
+                //     var order =
+                //         await _context.Ordermasters.FirstOrDefaultAsync(o =>
+                //             o.Id == payment.OrderId
+                //         ) ?? throw new Exception("Order not found");
 
-                    var items = await _context
-                        .OrderItems.Where(oi => oi.OrderId == order.Id)
-                        .ToListAsync();
+                //     var items = await _context
+                //         .OrderItems.Where(oi => oi.OrderId == order.Id)
+                //         .ToListAsync();
 
-                    byte[] invoicePdf = _invoicePdfService.GenerateInvoiceAsBytes(order, items);
+                //     byte[] invoicePdf = _invoicePdfService.GenerateInvoiceAsBytes(order, items);
 
-                    try
-                    {
-                        await _emailService.SendPaymentSuccessMailAsync(order, invoicePdf);
-                    }
-                    catch (Exception ex)
-                    {
-                        // Email failure must not break payment flow
-                        Console.WriteLine(ex.Message);
-                    }
-                }
+                //     try
+                //     {
+                //         await _emailService.SendPaymentSuccessMailAsync(order, invoicePdf);
+                //     }
+                //     catch (Exception ex)
+                //     {
+                //         // Email failure must not break payment flow
+                //         Console.WriteLine(ex.Message);
+                //     }
+                // }
 
                 await transaction.CommitAsync();
 
