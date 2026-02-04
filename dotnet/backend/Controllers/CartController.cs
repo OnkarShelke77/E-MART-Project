@@ -1,71 +1,103 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using EMart.DTOs;
-using EMart.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using EMart.Data;
+using EMart.Models;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace EMart.Controllers
 {
     [Authorize]
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/cart")] // Matches Java @RequestMapping("/api/cart")
     public class CartController : ControllerBase
     {
-        private readonly ICartService _cartService;
+        private readonly EMartDbContext _context;
 
-        public CartController(ICartService cartService)
+        public CartController(EMartDbContext context)
         {
-            _cartService = cartService;
+            _context = context;
         }
 
-        private string? UserEmail => User.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+        private string? UserEmail => User.FindFirst(ClaimTypes.Name)?.Value 
+                                     ?? User.FindFirst("sub")?.Value 
+                                     ?? User.Identity?.Name;
 
-        [HttpGet("my")]
-        public async Task<IActionResult> GetMyCart()
+        // CREATE cart for logged-in user
+        [HttpPost("create")]
+        public async Task<ActionResult<Cart>> CreateCart()
         {
             if (UserEmail == null) return Unauthorized();
-            var cart = await _cartService.GetUserCartAsync(UserEmail);
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == UserEmail);
+            if (user == null) return NotFound("User not found");
+
+            if (await _context.Carts.AnyAsync(c => c.UserId == user.Id))
+            {
+                return BadRequest("Cart already exists");
+            }
+
+            var cart = new Cart
+            {
+                UserId = user.Id,
+                IsActive = 'Y'
+            };
+
+            _context.Carts.Add(cart);
+            await _context.SaveChangesAsync();
+
             return Ok(cart);
         }
 
-        [HttpPost("add")]
-        public async Task<IActionResult> AddItem([FromBody] CartItemRequest request)
+        // GET logged-in user's cart
+        [HttpGet("my")]
+        public async Task<ActionResult<Cart>> GetMyCart()
         {
             if (UserEmail == null) return Unauthorized();
-            try
-            {
-                var item = await _cartService.AddOrUpdateItemAsync(UserEmail, request);
-                return Ok(item);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+
+            var cart = await _context.Carts
+                .Include(c => c.CartItems)
+                .ThenInclude(ci => ci.Product)
+                .FirstOrDefaultAsync(c => c.User.Email == UserEmail);
+
+            if (cart == null) return NotFound("Cart not found");
+
+            return Ok(cart);
         }
 
-        [HttpPut("update/{id}")]
-        public async Task<IActionResult> UpdateQuantity(int id, [FromBody] int quantity)
+        // UPDATE logged-in user's cart
+        [HttpPut("update")]
+        public async Task<ActionResult<Cart>> UpdateMyCart([FromBody] Cart updatedCart)
         {
             if (UserEmail == null) return Unauthorized();
-            try
-            {
-                var item = await _cartService.UpdateQuantityAsync(UserEmail, id, quantity);
-                return Ok(item);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+
+            var cart = await _context.Carts
+                .FirstOrDefaultAsync(c => c.User.Email == UserEmail);
+
+            if (cart == null) return NotFound("Cart not found");
+
+            cart.IsActive = updatedCart.IsActive;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(cart);
         }
 
-        [HttpDelete("delete/{id}")]
-        public async Task<IActionResult> RemoveItem(int id)
+        // DELETE logged-in user's cart
+        [HttpDelete("delete")]
+        public async Task<ActionResult<string>> DeleteMyCart()
         {
             if (UserEmail == null) return Unauthorized();
-            var success = await _cartService.RemoveItemAsync(UserEmail, id);
-            if (!success) return NotFound(new { message = "Item not found or not authorized" });
-            return Ok(new { message = "Item removed successfully" });
+
+            var cart = await _context.Carts
+                .FirstOrDefaultAsync(c => c.User.Email == UserEmail);
+
+            if (cart == null) return NotFound("Cart not found");
+
+            _context.Carts.Remove(cart);
+            await _context.SaveChangesAsync();
+
+            return Ok("Cart deleted successfully");
         }
     }
 }

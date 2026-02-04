@@ -26,10 +26,10 @@ const HomePage = () => {
         setLoading(true);
 
         // Fetch Categories
-        const fetchCategories = axios.get('http://localhost:5000/api/catalog/categories');
+        const fetchCategories = axios.get('http://localhost:8080/api/catalog/categories');
 
         // Fetch All Products (for featured section)
-        const fetchProducts = axios.get('http://localhost:5000/api/Products');
+        const fetchProducts = axios.get('http://localhost:8080/api/Products');
 
         Promise.all([fetchCategories, fetchProducts])
             .then(([resCat, resProd]) => {
