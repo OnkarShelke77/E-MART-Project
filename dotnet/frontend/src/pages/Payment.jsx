@@ -11,7 +11,8 @@ import {
     FiShoppingBag,
     FiArrowRight,
     FiActivity,
-    FiChevronLeft
+    FiChevronLeft,
+    FiGift
 } from "react-icons/fi";
 
 const Payment = () => {
@@ -20,6 +21,11 @@ const Payment = () => {
     const [paymentMode, setPaymentMode] = useState("RAZORPAY");
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
+
+    // Missing states for points logic
+    const [loyaltyCard, setLoyaltyCard] = useState(null);
+    const [paymentChoice, setPaymentChoice] = useState("CASH"); // CASH, POINTS, BOTH
+    const [pointsToUse, setPointsToUse] = useState(0);
 
     // Calculate totals
     const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
@@ -32,6 +38,23 @@ const Payment = () => {
         script.src = "https://checkout.razorpay.com/v1/checkout.js";
         script.async = true;
         document.body.appendChild(script);
+
+        // Fetch Loyalty Card
+        const fetchLoyaltyCard = async () => {
+            try {
+                const token = localStorage.getItem("token");
+                if (token) {
+                    const { data } = await axios.get("http://localhost:8080/api/loyaltycard/my", {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    setLoyaltyCard(data);
+                }
+            } catch (err) {
+                console.error("Failed to fetch loyalty card", err);
+            }
+        };
+        fetchLoyaltyCard();
+
         return () => {
             const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
             if (existingScript) document.body.removeChild(existingScript);
@@ -50,10 +73,10 @@ const Payment = () => {
     // }, [paymentChoice, maxPointsPossible]);
 
     useEffect(() => {
-  if (paymentChoice === "CASH") {
-    setPointsToUse(0);
-  }
-}, [paymentChoice]);
+        if (paymentChoice === "CASH") {
+            setPointsToUse(0);
+        }
+    }, [paymentChoice]);
 
 
     const handlePointsChange = (val) => {
@@ -218,9 +241,9 @@ const Payment = () => {
                 await axios.post("http://localhost:8080/payments", {
                     orderId: orderId,
                     userId: userId,
-                    amountPaid: total,
+                    amountPaid: finalPayable, // Use adjusted amount
                     paymentMode: "COD",
-                    paymentStatus: "SUCCESS", // Triggering backend email logic (Hamzah's code)
+                    paymentStatus: "SUCCESS",
                     transactionId: "COD-" + Date.now()
                 }, {
                     headers: { Authorization: `Bearer ${token}` }
@@ -402,7 +425,7 @@ const Payment = () => {
 
                     <div className={`${styles.summaryRow} ${styles.totalRow}`}>
                         <span>Total Payable</span>
-                        <span>₹{total.toFixed(2)}</span>
+                        <span>₹{finalPayable.toFixed(2)}</span>
                     </div>
 
                     <button
@@ -418,7 +441,7 @@ const Payment = () => {
                         ) : (
                             <>
                                 <FiShoppingBag />
-                                <span>{paymentMode === 'COD' ? 'Confirm Order' : `Pay ₹${total.toFixed(0)}`}</span>
+                                <span>{paymentMode === 'COD' ? 'Confirm Order' : `Pay ₹${finalPayable.toFixed(0)}`}</span>
                                 <FiArrowRight />
                             </>
                         )}

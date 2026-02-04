@@ -1,74 +1,120 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using EMart.Data;
 using EMart.Models;
 using EMart.DTOs;
-using EMart.Helpers;
 using EMart.Services;
 
 namespace EMart.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("auth")] // Matches Java @RequestMapping("/auth")
     public class AuthController : ControllerBase
     {
-        private readonly EMartDbContext _context;
+        private readonly IUserService _userService;
         private readonly IJwtTokenService _jwtService;
+        private readonly IEmailService _emailService;
 
-        public AuthController(EMartDbContext context, IJwtTokenService jwtService)
+        public AuthController(IUserService userService, IJwtTokenService jwtService, IEmailService emailService)
         {
-            _context = context;
+            _userService = userService;
             _jwtService = jwtService;
+            _emailService = emailService;
         }
 
+        // ---------------- NORMAL REGISTER ----------------
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+        public async Task<ActionResult<LoginResponseDTO>> Register([FromBody] User user)
         {
-            if (await _context.Users.AnyAsync(u => u.Email == request.Email))
+            try 
             {
-                return BadRequest(new { message = "Email already registered" });
+                var savedUser = await _userService.RegisterAsync(user);
+
+                var response = new LoginResponseDTO
+                {
+                    UserId = savedUser.Id,
+                    CartId = savedUser.Cart?.Id,
+                    FullName = savedUser.FullName,
+                    Email = savedUser.Email,
+                    Message = "Registration successful"
+                };
+
+                return Ok(response);
             }
-
-            var user = new User
+            catch (Exception ex)
             {
-                FullName = request.FullName,
-                Email = request.Email,
-                PasswordHash = PasswordHasher.HashPassword(request.Password),
-                Mobile = request.Mobile,
-                Address = request.Address,
-                Provider = "LOCAL"
-            };
-
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-
-            // Create cart for new user
-            var cart = new Cart { UserId = user.Id };
-            _context.Carts.Add(cart);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Registration successful" });
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
+        // ---------------- NORMAL LOGIN ----------------
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        public async Task<ActionResult<LoginResponseDTO>> Login([FromBody] LoginRequest request)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
-
-            if (user == null || user.PasswordHash == null || !PasswordHasher.VerifyPassword(request.Password, user.PasswordHash))
+            try
             {
-                return Unauthorized(new { message = "Invalid email or password" });
+                // ✅ Authenticate User
+                var user = await _userService.LoginAsync(request.Email, request.Password);
+
+                if (user == null) return Unauthorized(new { message = "Invalid credentials" });
+
+                // ✅ Send Login Email
+                await _emailService.SendLoginSuccessMailAsync(user);
+
+                // ✅ Generate JWT Token
+                var token = _jwtService.GenerateToken(user);
+
+                // ✅ Prepare Response
+                var response = new LoginResponseDTO
+                {
+                    UserId = user.Id,
+                    CartId = user.Cart?.Id,
+                    FullName = user.FullName,
+                    Email = user.Email,
+                    Token = token,
+                    Message = "Login successful + Email Sent!"
+                };
+
+                return Ok(response);
             }
+            catch (Exception ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+        }
 
-            var token = _jwtService.GenerateToken(user);
+        // ---------------- GOOGLE LOGIN (SSO) ----------------
+        [HttpPost("google")]
+        public async Task<ActionResult<LoginResponseDTO>> GoogleLogin([FromBody] GoogleLoginRequest request)
+        {
+            try
+            {
+                // Auto create user if first time
+                var user = await _userService.LoginWithGoogleAsync(request.Email, request.FullName);
 
-            return Ok(new AuthResponse(
-                user.Id,
-                user.FullName,
-                user.Email,
-                token,
-                user.Provider
-            ));
+                if (user == null) return BadRequest(new { message = "Google login failed" });
+
+                // ✅ Send Login Email
+                await _emailService.SendLoginSuccessMailAsync(user);
+
+                // Generate JWT Token
+                var token = _jwtService.GenerateToken(user);
+
+                // Response
+                var response = new LoginResponseDTO
+                {
+                    UserId = user.Id,
+                    CartId = user.Cart?.Id,
+                    FullName = user.FullName,
+                    Email = user.Email,
+                    Token = token,
+                    Message = "Google login successful + Email Sent!"
+                };
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }

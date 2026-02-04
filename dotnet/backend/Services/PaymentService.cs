@@ -1,161 +1,138 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using EMart.Data;
-using EMart.DTOs;
 using EMart.Models;
+using EMart.DTOs;
 using Microsoft.EntityFrameworkCore;
 
 namespace EMart.Services
 {
-    // ===== Interface =====
-    public interface IPaymentService
+    public interface IInvoicePdfService
     {
-        Task<PaymentResponseDto> CreatePaymentAsync(PaymentRequestDto dto);
-        Task<List<PaymentResponseDto>> GetAllPaymentsAsync();
-        Task<PaymentResponseDto> GetPaymentByIdAsync(int id);
-        Task<List<PaymentResponseDto>> GetPaymentsByUserAsync(int userId);
+        byte[] GenerateInvoicePdf(Ordermaster order, List<OrderItem> items);
     }
 
-    // ===== Implementation =====
+    public class InvoicePdfService : IInvoicePdfService
+    {
+        public byte[] GenerateInvoicePdf(Ordermaster order, List<OrderItem> items)
+        {
+            // Placeholder for PDF generation
+            // In a real scenario, use QuestPDF or iText7
+            return System.Text.Encoding.UTF8.GetBytes("Dummy PDF Content for Order " + order.Id);
+        }
+    }
+
+    public interface IPaymentService
+    {
+        Task<PaymentResponseDTO> CreatePaymentAsync(PaymentRequestDTO dto);
+        Task<List<PaymentResponseDTO>> GetAllPaymentsAsync();
+        Task<PaymentResponseDTO?> GetPaymentByIdAsync(int id);
+        Task<List<PaymentResponseDTO>> GetPaymentsByUserAsync(int userId);
+    }
+
     public class PaymentService : IPaymentService
     {
         private readonly EMartDbContext _context;
         private readonly IEmailService _emailService;
         private readonly IInvoicePdfService _invoicePdfService;
 
-        public PaymentService(
-            EMartDbContext context,
-            IEmailService emailService,
-            IInvoicePdfService invoicePdfService
-        )
+        public PaymentService(EMartDbContext context, IEmailService emailService, IInvoicePdfService invoicePdfService)
         {
             _context = context;
             _emailService = emailService;
             _invoicePdfService = invoicePdfService;
         }
 
-        // @Transactional equivalent
-        public async Task<PaymentResponseDto> CreatePaymentAsync(PaymentRequestDto dto)
+        public async Task<PaymentResponseDTO> CreatePaymentAsync(PaymentRequestDTO dto)
         {
-            await using var transaction = await _context.Database.BeginTransactionAsync();
-
-            try
+            var payment = new Payment
             {
-                var payment = new Payment
+                OrderId = dto.OrderId,
+                UserId = dto.UserId,
+                AmountPaid = dto.AmountPaid,
+                PaymentMode = dto.PaymentMode,
+                PaymentStatus = dto.PaymentStatus ?? "initiated",
+                TransactionId = dto.TransactionId,
+                PaymentDate = DateTime.UtcNow
+            };
+
+            _context.Payments.Add(payment);
+            await _context.SaveChangesAsync();
+
+            if ("SUCCESS".Equals(payment.PaymentStatus, StringComparison.OrdinalIgnoreCase))
+            {
+                var order = await _context.Ordermasters
+                    .Include(o => o.User)
+                    .Include(o => o.Items)
+                    .ThenInclude(i => i.Product)
+                    .FirstOrDefaultAsync(o => o.Id == dto.OrderId);
+
+                if (order != null)
                 {
-                    OrderId = dto.OrderId,
-                    UserId = dto.UserId,
-                    AmountPaid = dto.AmountPaid,
-                    PaymentMode = dto.PaymentMode,
-                    PaymentStatus = !string.IsNullOrEmpty(dto.PaymentStatus)
-                        ? dto.PaymentStatus
-                        : "initiated",
-                    TransactionId = dto.TransactionId,
-                    PaymentDate = DateTime.UtcNow,
-                };
+                    var items = order.Items.ToList();
+                    var invoicePdf = _invoicePdfService.GenerateInvoicePdf(order, items);
 
-                _context.Payments.Add(payment);
-                await _context.SaveChangesAsync();
-
-                // Payment success → send mail + invoice
-                // if ("SUCCESS".Equals(payment.PaymentStatus, StringComparison.OrdinalIgnoreCase))
-                // {
-                //     var order =
-                //         await _context.Ordermasters.FirstOrDefaultAsync(o =>
-                //             o.Id == payment.OrderId
-                //         ) ?? throw new Exception("Order not found");
-
-                //     var items = await _context
-                //         .OrderItems.Where(oi => oi.OrderId == order.Id)
-                //         .ToListAsync();
-
-                //     byte[] invoicePdf = _invoicePdfService.GenerateInvoiceAsBytes(order, items);
-
-                //     try
-                //     {
-                //         await _emailService.SendPaymentSuccessMailAsync(order, invoicePdf);
-                //     }
-                //     catch (Exception ex)
-                //     {
-                //         // Email failure must not break payment flow
-                //         Console.WriteLine(ex.Message);
-                //     }
-                // }
-
-                await transaction.CommitAsync();
-
-                return await MapToDtoAsync(payment.Id);
+                    try
+                    {
+                        await _emailService.SendPaymentSuccessMailAsync(order, invoicePdf);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Email failure: {ex.Message}");
+                    }
+                }
             }
-            catch
-            {
-                await transaction.RollbackAsync();
-                throw;
-            }
+
+            // Reload to get navigation properties for mapping
+            var saved = await _context.Payments
+                .Include(p => p.User)
+                .Include(p => p.Order)
+                .FirstOrDefaultAsync(p => p.Id == payment.Id);
+
+            return MapToDTO(saved!);
         }
 
-        public async Task<List<PaymentResponseDto>> GetAllPaymentsAsync()
+        public async Task<List<PaymentResponseDTO>> GetAllPaymentsAsync()
         {
-            var payments = await _context
-                .Payments.Include(p => p.User)
+            var payments = await _context.Payments
+                .Include(p => p.User)
                 .Include(p => p.Order)
                 .ToListAsync();
-
-            return payments.Select(MapToDto).ToList();
+            return payments.Select(MapToDTO).ToList();
         }
 
-        public async Task<PaymentResponseDto> GetPaymentByIdAsync(int id)
+        public async Task<PaymentResponseDTO?> GetPaymentByIdAsync(int id)
         {
-            var payment = await _context
-                .Payments.Include(p => p.User)
+            var payment = await _context.Payments
+                .Include(p => p.User)
                 .Include(p => p.Order)
                 .FirstOrDefaultAsync(p => p.Id == id);
-
-            if (payment == null)
-                throw new Exception("Payment not found");
-
-            return MapToDto(payment);
+            return payment != null ? MapToDTO(payment) : null;
         }
 
-        public async Task<List<PaymentResponseDto>> GetPaymentsByUserAsync(int userId)
+        public async Task<List<PaymentResponseDTO>> GetPaymentsByUserAsync(int userId)
         {
-            var payments = await _context
-                .Payments.Include(p => p.User)
+            var payments = await _context.Payments
+                .Include(p => p.User)
+                .Include(p => p.Order)
                 .Where(p => p.UserId == userId)
                 .ToListAsync();
-
-            return payments.Select(MapToDto).ToList();
+            return payments.Select(MapToDTO).ToList();
         }
 
-        // ===== Mapper =====
-        private static PaymentResponseDto MapToDto(Payment p)
+        private PaymentResponseDTO MapToDTO(Payment p)
         {
-            return new PaymentResponseDto
+            return new PaymentResponseDTO
             {
                 PaymentId = p.Id,
                 AmountPaid = p.AmountPaid,
-                PaymentMode = p.PaymentMode,
+                PaymentMode = p.PaymentMode ?? "",
                 PaymentStatus = p.PaymentStatus,
                 TransactionId = p.TransactionId,
-                PaymentDate = p.PaymentDate ?? DateTime.UtcNow,
-
+                PaymentDate = p.PaymentDate,
                 OrderId = p.OrderId,
                 UserId = p.UserId,
-
                 UserName = p.User?.FullName,
-                UserEmail = p.User?.Email,
+                UserEmail = p.User?.Email
             };
-        }
-
-        private async Task<PaymentResponseDto> MapToDtoAsync(int paymentId)
-        {
-            var payment = await _context
-                .Payments.Include(p => p.User)
-                .Include(p => p.Order)
-                .FirstAsync(p => p.Id == paymentId);
-
-            return MapToDto(payment);
         }
     }
 }

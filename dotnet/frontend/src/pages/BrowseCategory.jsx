@@ -102,7 +102,7 @@ const BrowseCategory = () => {
     setLoading(true);
 
     axios
-      .get(`http://localhost:5000/api/catalog/categories/${catId}`)
+      .get(`http://localhost:8080/api/catalog/categories/${catId}`)
       .then((res) => {
         const data = res.data;
 

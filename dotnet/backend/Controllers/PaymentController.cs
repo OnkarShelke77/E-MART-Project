@@ -1,55 +1,54 @@
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using EMart.DTOs;
 using EMart.Services;
-using Microsoft.AspNetCore.Mvc;
 
 namespace EMart.Controllers
 {
+    [Authorize]
     [ApiController]
-    [Route("api/payments")]
+    [Route("payments")] // Matches Java @RequestMapping("/payments")
     public class PaymentController : ControllerBase
     {
         private readonly IPaymentService _paymentService;
 
-        // Constructor Injection (equivalent to @Autowired)
         public PaymentController(IPaymentService paymentService)
         {
             _paymentService = paymentService;
         }
 
-        // ✅ CREATE payment
         [HttpPost]
-        public async Task<ActionResult<PaymentResponseDto>> CreatePayment(
-            [FromBody] PaymentRequestDto dto
-        )
+        public async Task<ActionResult<PaymentResponseDTO>> Create([FromBody] PaymentRequestDTO dto)
         {
-            var result = await _paymentService.CreatePaymentAsync(dto);
-            return Ok(result);
+            try
+            {
+                var result = await _paymentService.CreatePaymentAsync(dto);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
-        // ✅ GET all payments
         [HttpGet]
-        public async Task<ActionResult<List<PaymentResponseDto>>> GetAllPayments()
+        public async Task<ActionResult<List<PaymentResponseDTO>>> GetAll()
         {
-            var result = await _paymentService.GetAllPaymentsAsync();
-            return Ok(result);
+            return await _paymentService.GetAllPaymentsAsync();
         }
 
-        // ✅ GET payment by id
-        [HttpGet("{id:int}")]
-        public async Task<ActionResult<PaymentResponseDto>> GetPaymentById(int id)
+        [HttpGet("{id}")]
+        public async Task<ActionResult<PaymentResponseDTO>> GetById(int id)
         {
-            var result = await _paymentService.GetPaymentByIdAsync(id);
-            return Ok(result);
+            var payment = await _paymentService.GetPaymentByIdAsync(id);
+            if (payment == null) return NotFound();
+            return Ok(payment);
         }
 
-        // ✅ GET payments by user id
-        [HttpGet("user/{userId:int}")]
-        public async Task<ActionResult<List<PaymentResponseDto>>> GetPaymentsByUser(int userId)
+        [HttpGet("user/{userId}")]
+        public async Task<ActionResult<List<PaymentResponseDTO>>> GetByUser(int userId)
         {
-            var result = await _paymentService.GetPaymentsByUserAsync(userId);
-            return Ok(result);
+            return await _paymentService.GetPaymentsByUserAsync(userId);
         }
     }
 }

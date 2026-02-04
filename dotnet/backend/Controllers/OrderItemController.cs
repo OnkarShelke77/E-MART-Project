@@ -1,25 +1,30 @@
-using EMart.Models;
-using EMart.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using EMart.Data;
+using EMart.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace EMart.Controllers
 {
+    [Authorize]
     [ApiController]
-    [Route("api/order-items")]
+    [Route("api/order-items")] // Matches Java @RequestMapping("/api/order-items")
     public class OrderItemController : ControllerBase
     {
-        private readonly IOrderItemService _orderItemService;
+        private readonly EMartDbContext _context;
 
-        public OrderItemController(IOrderItemService orderItemService)
+        public OrderItemController(EMartDbContext context)
         {
-            _orderItemService = orderItemService;
+            _context = context;
         }
 
         [HttpGet("order/{orderId}")]
-        public async Task<ActionResult<IEnumerable<OrderItem>>> GetItemsByOrder(int orderId)
+        public async Task<ActionResult<List<OrderItem>>> GetItemsByOrder(int orderId)
         {
-            var items = await _orderItemService.GetItemsByOrderIdAsync(orderId);
-            return Ok(items);
+            return await _context.OrderItems
+                .Include(oi => oi.Product)
+                .Where(oi => oi.OrderId == orderId)
+                .ToListAsync();
         }
     }
 }

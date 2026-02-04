@@ -12,36 +12,43 @@ namespace EMart.Models
         [Column("address_id")]
         public int AddressId { get; set; }
 
-        [Required]
         [Column("user_id")]
-        public int UserId { get; set; }
+        public int? UserId { get; set; }
 
         [ForeignKey("UserId")]
         [JsonIgnore]
-        public virtual User User { get; set; } = null!;
+        public virtual User? User { get; set; }
 
-        [MaxLength(100)]
+        [Column("full_name")]
+        [MaxLength(255)]
         public string? FullName { get; set; }
 
-        [MaxLength(15)]
+        [Column("mobile")]
+        [MaxLength(255)]
         public string? Mobile { get; set; }
 
-        [MaxLength(50)]
+        [Column("house_no")]
+        [MaxLength(255)]
         public string? HouseNo { get; set; }
 
+        [Column("street")]
         [MaxLength(255)]
         public string? Street { get; set; }
 
-        [MaxLength(100)]
+        [Column("city")]
+        [MaxLength(255)]
         public string? City { get; set; }
 
-        [MaxLength(100)]
+        [Column("state")]
+        [MaxLength(255)]
         public string? State { get; set; }
 
-        [MaxLength(10)]
+        [Column("pincode")]
+        [MaxLength(255)]
         public string? Pincode { get; set; }
 
-        [MaxLength(10)]
+        [Column("is_default")]
+        [MaxLength(255)]
         public string? IsDefault { get; set; } = "N";
     }
 }

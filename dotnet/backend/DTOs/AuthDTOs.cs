@@ -10,11 +10,15 @@ namespace EMart.DTOs
         string? Address
     );
 
-    public record AuthResponse(
-        int Id,
-        string FullName,
-        string Email,
-        string Token,
-        string Provider
-    );
+    public class LoginResponseDTO
+    {
+        public int? UserId { get; set; }
+        public int? CartId { get; set; }
+        public string? FullName { get; set; }
+        public string? Email { get; set; }
+        public string? Token { get; set; }
+        public string? Message { get; set; }
+    }
+
+    public record GoogleLoginRequest(string Email, string FullName);
 }

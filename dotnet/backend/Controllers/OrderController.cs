@@ -1,12 +1,14 @@
-using EMart.DTOs;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using EMart.Models;
 using EMart.Services;
-using Microsoft.AspNetCore.Mvc;
+using EMart.DTOs;
 
 namespace EMart.Controllers
 {
+    [Authorize]
     [ApiController]
-    [Route("orders")]
+    [Route("orders")] // Matches Java @RequestMapping("/orders")
     public class OrderController : ControllerBase
     {
         private readonly IOrderService _orderService;
@@ -31,14 +33,13 @@ namespace EMart.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Ordermaster>>> GetAllOrders()
+        public async Task<ActionResult<List<Ordermaster>>> GetAll()
         {
-            var orders = await _orderService.GetAllOrdersAsync();
-            return Ok(orders);
+            return await _orderService.GetAllOrdersAsync();
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Ordermaster>> GetOrderById(int id)
+        public async Task<ActionResult<Ordermaster>> GetById(int id)
         {
             var order = await _orderService.GetOrderByIdAsync(id);
             if (order == null) return NotFound();
@@ -46,10 +47,9 @@ namespace EMart.Controllers
         }
 
         [HttpGet("user/{userId}")]
-        public async Task<ActionResult<IEnumerable<Ordermaster>>> GetOrdersByUser(int userId)
+        public async Task<ActionResult<List<Ordermaster>>> GetByUser(int userId)
         {
-            var orders = await _orderService.GetOrdersByUserAsync(userId);
-            return Ok(orders);
+            return await _orderService.GetOrdersByUserAsync(userId);
         }
     }
 }
