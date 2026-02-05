@@ -33,5 +33,8 @@ namespace EMart.Models
         [Required]
         [Column(TypeName = "decimal(10,2)")]
         public decimal Price { get; set; }
+
+        [Column("points_used")]
+        public int PointsUsed { get; set; } = 0;
     }
 }

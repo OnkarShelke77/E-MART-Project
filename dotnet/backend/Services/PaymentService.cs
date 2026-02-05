@@ -1,6 +1,6 @@
 using EMart.Data;
-using EMart.Models;
 using EMart.DTOs;
+using EMart.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace EMart.Services
@@ -20,12 +20,19 @@ namespace EMart.Services
         private readonly EMartDbContext _context;
         private readonly IEmailService _emailService;
         private readonly IInvoicePdfService _invoicePdfService;
+        private readonly ILoyaltycardService _loyaltycardService;
 
-        public PaymentService(EMartDbContext context, IEmailService emailService, IInvoicePdfService invoicePdfService)
+        public PaymentService(
+            EMartDbContext context,
+            IEmailService emailService,
+            IInvoicePdfService invoicePdfService,
+            ILoyaltycardService loyaltycardService
+        )
         {
             _context = context;
             _emailService = emailService;
             _invoicePdfService = invoicePdfService;
+            _loyaltycardService = loyaltycardService;
         }
 
         public async Task<PaymentResponseDTO> CreatePaymentAsync(PaymentRequestDTO dto)
@@ -38,7 +45,7 @@ namespace EMart.Services
                 PaymentMode = dto.PaymentMode,
                 PaymentStatus = dto.PaymentStatus ?? "initiated",
                 TransactionId = dto.TransactionId,
-                PaymentDate = DateTime.UtcNow
+                PaymentDate = DateTime.UtcNow,
             };
 
             _context.Payments.Add(payment);
@@ -46,14 +53,70 @@ namespace EMart.Services
 
             if ("SUCCESS".Equals(payment.PaymentStatus, StringComparison.OrdinalIgnoreCase))
             {
-                var order = await _context.Ordermasters
-                    .Include(o => o.User)
+                var order = await _context
+                    .Ordermasters.Include(o => o.User)
                     .Include(o => o.Items)
-                    .ThenInclude(i => i.Product)
+                        .ThenInclude(i => i.Product)
                     .FirstOrDefaultAsync(o => o.Id == dto.OrderId);
 
                 if (order != null)
                 {
+                    // 1. DEDUCT POINTS
+                    int totalPointsUsed = order.Items.Sum(i => i.PointsUsed);
+                    if (totalPointsUsed > 0)
+                    {
+                        try
+                        {
+                            await _loyaltycardService.UpdatePointsAsync(
+                                payment.UserId,
+                                -totalPointsUsed
+                            );
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Failed to deduct points: {ex.Message}");
+                        }
+                    }
+
+                    // 2. AWARD POINTS (10% of cash amount)
+                    // Calculate cash amount: Total - Points Value
+                    // Assuming Points Value = 1 Point = ₹1 (based on generic logic)
+                    // Or simpler: We can recalculate from items where PriceType != "POINTS"
+                    // But OrderItem doesn't store PriceType.
+
+                    // Alternative: Total Amount - Points Used = Cash Amount
+                    decimal cashAmount = Math.Max(0, order.TotalAmount - totalPointsUsed);
+                    int pointsEarned = (int)(cashAmount * 0.10m);
+
+                    if (pointsEarned > 0)
+                    {
+                        try
+                        {
+                            await _loyaltycardService.UpdatePointsAsync(
+                                payment.UserId,
+                                pointsEarned
+                            );
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Failed to award points: {ex.Message}");
+                        }
+                    }
+
+                    // 3. CLEAR CART
+                    // Clear all items in the user's cart
+                    var userCartItems = await _context
+                        .Cartitems.Include(ci => ci.Cart)
+                        .Where(ci => ci.Cart.UserId == payment.UserId)
+                        .ToListAsync();
+
+                    if (userCartItems.Any())
+                    {
+                        _context.Cartitems.RemoveRange(userCartItems);
+                        await _context.SaveChangesAsync();
+                    }
+
+                    // 4. GENERATE INVOICE & EMAIL
                     var items = order.Items.ToList();
                     var invoicePdf = _invoicePdfService.GenerateInvoicePdf(order, items);
 
@@ -69,8 +132,8 @@ namespace EMart.Services
             }
 
             // Reload to get navigation properties for mapping
-            var saved = await _context.Payments
-                .Include(p => p.User)
+            var saved = await _context
+                .Payments.Include(p => p.User)
                 .Include(p => p.Order)
                 .FirstOrDefaultAsync(p => p.Id == payment.Id);
 
@@ -79,8 +142,8 @@ namespace EMart.Services
 
         public async Task<List<PaymentResponseDTO>> GetAllPaymentsAsync()
         {
-            var payments = await _context.Payments
-                .Include(p => p.User)
+            var payments = await _context
+                .Payments.Include(p => p.User)
                 .Include(p => p.Order)
                 .ToListAsync();
             return payments.Select(MapToDTO).ToList();
@@ -88,8 +151,8 @@ namespace EMart.Services
 
         public async Task<PaymentResponseDTO?> GetPaymentByIdAsync(int id)
         {
-            var payment = await _context.Payments
-                .Include(p => p.User)
+            var payment = await _context
+                .Payments.Include(p => p.User)
                 .Include(p => p.Order)
                 .FirstOrDefaultAsync(p => p.Id == id);
             return payment != null ? MapToDTO(payment) : null;
@@ -97,8 +160,8 @@ namespace EMart.Services
 
         public async Task<List<PaymentResponseDTO>> GetPaymentsByUserAsync(int userId)
         {
-            var payments = await _context.Payments
-                .Include(p => p.User)
+            var payments = await _context
+                .Payments.Include(p => p.User)
                 .Include(p => p.Order)
                 .Where(p => p.UserId == userId)
                 .ToListAsync();
@@ -118,7 +181,7 @@ namespace EMart.Services
                 OrderId = p.OrderId,
                 UserId = p.UserId,
                 UserName = p.User?.FullName,
-                UserEmail = p.User?.Email
+                UserEmail = p.User?.Email,
             };
         }
     }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import styles from "../styles/CheckoutAddress.module.css";
 import { useNavigate } from "react-router-dom";
@@ -27,6 +27,37 @@ const CheckoutAddress = () => {
       [e.target.name]: e.target.value
     });
   };
+
+  useEffect(() => {
+    const fetchAddress = async () => {
+      try {
+        const response = await axios.get("http://localhost:8080/api/address/my", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.data && response.data.length > 0) {
+          // Use the most recent address (assuming last in list)
+          const savedAddress = response.data[response.data.length - 1];
+          setAddress({
+            fullName: savedAddress.fullName || "",
+            mobile: savedAddress.mobile || "",
+            houseNo: savedAddress.houseNo || "",
+            street: savedAddress.street || "",
+            city: savedAddress.city || "",
+            state: savedAddress.state || "",
+            pincode: savedAddress.pincode || ""
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch saved addresses", err);
+        // Optional: Perform silent fail without showing error to user since it's just prefill
+      }
+    };
+
+    if (token) {
+      fetchAddress();
+    }
+  }, [token]);
 
   const saveAddress = async () => {
     setError("");
@@ -103,7 +134,7 @@ const CheckoutAddress = () => {
             <label><FiUser size={14} /> Full Name *</label>
             <div className={styles.inputWrapper}>
               <FiUser className={styles.iconPrefix} />
-              <input name="fullName" placeholder="John Doe" onChange={handleChange} />
+              <input name="fullName" value={address.fullName} placeholder="John Doe" onChange={handleChange} />
             </div>
           </div>
 
@@ -112,7 +143,7 @@ const CheckoutAddress = () => {
             <label><FiPhone size={14} /> Mobile Number *</label>
             <div className={styles.inputWrapper}>
               <FiPhone className={styles.iconPrefix} />
-              <input name="mobile" placeholder="10-digit number" onChange={handleChange} />
+              <input name="mobile" value={address.mobile} placeholder="10-digit number" onChange={handleChange} />
             </div>
           </div>
 
@@ -121,7 +152,7 @@ const CheckoutAddress = () => {
             <label><FiHome size={14} /> House / Flat No *</label>
             <div className={styles.inputWrapper}>
               <FiHome className={styles.iconPrefix} />
-              <input name="houseNo" placeholder="House #123" onChange={handleChange} />
+              <input name="houseNo" value={address.houseNo} placeholder="House #123" onChange={handleChange} />
             </div>
           </div>
 
@@ -130,7 +161,7 @@ const CheckoutAddress = () => {
             <label><FiMapPin size={14} /> Street / Area</label>
             <div className={styles.inputWrapper}>
               <FiMapPin className={styles.iconPrefix} />
-              <input name="street" placeholder="Main Road, Sector 4" onChange={handleChange} />
+              <input name="street" value={address.street} placeholder="Main Road, Sector 4" onChange={handleChange} />
             </div>
           </div>
 
@@ -139,7 +170,7 @@ const CheckoutAddress = () => {
             <label><FiMap size={14} /> City *</label>
             <div className={styles.inputWrapper}>
               <FiMap className={styles.iconPrefix} />
-              <input name="city" placeholder="Mumbai" onChange={handleChange} />
+              <input name="city" value={address.city} placeholder="Mumbai" onChange={handleChange} />
             </div>
           </div>
 
@@ -148,7 +179,7 @@ const CheckoutAddress = () => {
             <label><FiMapPin size={14} /> State</label>
             <div className={styles.inputWrapper}>
               <FiMapPin className={styles.iconPrefix} />
-              <input name="state" placeholder="Maharashtra" onChange={handleChange} />
+              <input name="state" value={address.state} placeholder="Maharashtra" onChange={handleChange} />
             </div>
           </div>
 
@@ -157,7 +188,7 @@ const CheckoutAddress = () => {
             <label><FiMapPin size={14} /> Pincode *</label>
             <div className={styles.inputWrapper}>
               <FiMapPin className={styles.iconPrefix} />
-              <input name="pincode" placeholder="400001" onChange={handleChange} />
+              <input name="pincode" value={address.pincode} placeholder="400001" onChange={handleChange} />
             </div>
           </div>
 
