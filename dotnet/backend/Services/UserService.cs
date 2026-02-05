@@ -18,10 +18,12 @@ namespace EMart.Services
     public class UserService : IUserService
     {
         private readonly EMartDbContext _context;
+        private readonly IEmailService _emailService;
 
-        public UserService(EMartDbContext context)
+        public UserService(EMartDbContext context, IEmailService emailService)
         {
             _context = context;
+            _emailService = emailService;
         }
 
         public async Task<User> RegisterAsync(User user)
@@ -48,6 +50,9 @@ namespace EMart.Services
             };
             _context.Carts.Add(cart);
             await _context.SaveChangesAsync();
+
+            // ✅ Trigger Registration Email
+            await _emailService.SendRegistrationSuccessMailAsync(user);
 
             return user;
         }
@@ -104,6 +109,9 @@ namespace EMart.Services
                 _context.Carts.Add(cart);
                 await _context.SaveChangesAsync();
                 
+                // ✅ Trigger Registration Email for first-time Google user
+                await _emailService.SendRegistrationSuccessMailAsync(user);
+
                 // Refresh user to get cart
                 user = await _context.Users
                     .Include(u => u.Cart)

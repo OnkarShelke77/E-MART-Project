@@ -1,0 +1,2 @@
+   1:7>D:\VITA\Project\0502\PG-DAC_E-Mart_Project\dotnet\backend\Services\InvoicePdfService.cs(171,92): error CS0117: 'BaseColor' does not contain a definition for 'WHITE' [D:\VITA\Project\0502\PG-DAC_E-Mart_Project\dotnet\backend\backend.csproj]
+   1:7>D:\VITA\Project\0502\PG-DAC_E-Mart_Project\dotnet\backend\Services\InvoicePdfService.cs(173,46): error CS0117: 'BaseColor' does not contain a definition for 'DARK_GRAY' [D:\VITA\Project\0502\PG-DAC_E-Mart_Project\dotnet\backend\backend.csproj]
