@@ -529,6 +529,13 @@
     font-weight: 500;
 }
 
+.summaryDesc {
+    font-size: 0.75rem;
+    color: #a0aec0;
+    font-weight: 400;
+    margin-top: 2px;
+}
+
 .summaryRow span:first-child {
     color: #718096;
 }

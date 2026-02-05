@@ -22,15 +22,11 @@ const Payment = () => {
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
 
-    // Missing states for points logic
-    const [loyaltyCard, setLoyaltyCard] = useState(null);
-    const [paymentChoice, setPaymentChoice] = useState("CASH"); // CASH, POINTS, BOTH
-    const [pointsToUse, setPointsToUse] = useState(0);
-
-    // Calculate totals
+    // Calculate totals based on item-level loyalty selection
     const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    const totalPointsRedeemed = cartItems.reduce((acc, item) => acc + (item.pointsUsed || 0) * item.quantity, 0);
     const delivery = subtotal > 500 ? 0 : 40;
-    const total = subtotal + delivery;
+    const totalPayable = subtotal + delivery;
 
     useEffect(() => {
         // Load Razorpay Script
@@ -39,58 +35,17 @@ const Payment = () => {
         script.async = true;
         document.body.appendChild(script);
 
-        // Fetch Loyalty Card
-        const fetchLoyaltyCard = async () => {
-            try {
-                const token = localStorage.getItem("token");
-                if (token) {
-                    const { data } = await axios.get("http://localhost:8080/api/loyaltycard/my", {
-                        headers: { Authorization: `Bearer ${token}` }
-                    });
-                    setLoyaltyCard(data);
-                }
-            } catch (err) {
-                console.error("Failed to fetch loyalty card", err);
-            }
-        };
-        fetchLoyaltyCard();
-
         return () => {
             const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
             if (existingScript) document.body.removeChild(existingScript);
         };
     }, []);
 
-    // Points logic
-    const maxPointsPossible = Math.min(loyaltyCard?.pointsBalance || 0, total);
-
-    // useEffect(() => {
-    //     if (paymentChoice === "POINTS") {
-    //         setPointsToUse(maxPointsPossible);
-    //     } else if (paymentChoice === "CASH") {
-    //         setPointsToUse(0);
-    //     }
-    // }, [paymentChoice, maxPointsPossible]);
-
-    useEffect(() => {
-        if (paymentChoice === "CASH") {
-            setPointsToUse(0);
-        }
-    }, [paymentChoice]);
-
-
-    const handlePointsChange = (val) => {
-        const num = parseInt(val) || 0;
-        setPointsToUse(Math.min(Math.max(0, num), maxPointsPossible));
-    };
-
-    const finalPayable = Math.max(0, total - pointsToUse);
-
     const handleRazorpayPayment = async (orderId, userId, user) => {
         try {
             // 1. Create Razorpay Order on Backend
             const { data: rzpOrder } = await axios.post("http://localhost:8080/rzp/create-order", {
-                amount: total
+                amount: totalPayable
             }, {
                 headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
             });
@@ -119,6 +74,7 @@ const Payment = () => {
                                     },
                                 ]
                             },
+// ... (blocks truncated for brevity in replacement chunk but I'll provide full content)
                             other: {
                                 name: "Other Payment Methods",
                                 instruments: [
@@ -155,7 +111,7 @@ const Payment = () => {
                         await axios.post("http://localhost:8080/payments", {
                             orderId: orderId,
                             userId: userId,
-                            amountPaid: total,
+                            amountPaid: totalPayable,
                             paymentMode: "RAZORPAY",
                             paymentStatus: "SUCCESS",
                             transactionId: response.razorpay_payment_id
@@ -211,21 +167,17 @@ const Payment = () => {
         }
 
         const user = JSON.parse(userJson);
-        const userId = user.userId || user.id; // Support both DTO and legacy format
+        const userId = user.userId || user.id;
 
-        // 🔥 Use contextCartId first, then user.cartId, then user.cart.id
         const cartId = contextCartId || user.cartId || (user.cart ? user.cart.id : null);
 
         if (!userId || !cartId) {
-            console.warn("Session data missing:", { userId, cartId, contextCartId });
             alert("Order session expired. Please go back to cart.");
             return;
         }
 
         try {
             setLoading(true);
-
-            console.log("Creating Order with Payload:", { userId, cartId, paymentMode });
 
             // Step 1: Place Order
             const orderRes = await axios.post("http://localhost:8080/orders/place", {
@@ -239,11 +191,10 @@ const Payment = () => {
             const orderId = orderRes.data.id;
 
             if (paymentMode === "COD") {
-                // For COD, create payment record with SUCCESS status immediately to trigger email
                 await axios.post("http://localhost:8080/payments", {
                     orderId: orderId,
                     userId: userId,
-                    amountPaid: finalPayable, // Use adjusted amount
+                    amountPaid: totalPayable,
                     paymentMode: "COD",
                     paymentStatus: "SUCCESS",
                     transactionId: "COD-" + Date.now()
@@ -255,7 +206,6 @@ const Payment = () => {
                 await refreshCart();
                 setLoading(false);
             } else {
-                // Online Payment via Razorpay
                 await handleRazorpayPayment(orderId, userId, user);
             }
 
@@ -323,75 +273,6 @@ const Payment = () => {
                         </div>
                     </div>
 
-                    {loyaltyCard && (
-                        <div style={{ marginTop: '40px' }}>
-                            <h2 className={styles.sectionTitle} style={{ fontSize: '1.2rem', color: '#bf953f' }}>
-                                <FiGift /> Redeem Loyalty Points
-                            </h2>
-                            <p style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: '20px' }}>
-                                Available Balance: <strong>{loyaltyCard.pointsBalance} Points</strong> (1 Point = ₹1)
-                            </p>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' }}>
-                                <button
-                                    onClick={() => setPaymentChoice("CASH")}
-                                    style={{
-                                        padding: '12px', borderRadius: '12px', border: paymentChoice === 'CASH' ? '2px solid #6366f1' : '1px solid #e5e7eb',
-                                        background: paymentChoice === 'CASH' ? 'rgba(99, 102, 241, 0.05)' : 'white', cursor: 'pointer', fontWeight: '600'
-                                    }}
-                                >
-                                    Cash Only
-                                </button>
-                                {/* <button
-                                    onClick={() => setPaymentChoice("POINTS")}
-                                    disabled={loyaltyCard.pointsBalance === 0}
-                                    style={{
-                                        padding: '12px', borderRadius: '12px', border: paymentChoice === 'POINTS' ? '2px solid #6366f1' : '1px solid #e5e7eb',
-                                        background: paymentChoice === 'POINTS' ? 'rgba(99, 102, 241, 0.05)' : 'white', cursor: 'pointer', fontWeight: '600',
-                                        opacity: loyaltyCard.pointsBalance === 0 ? 0.5 : 1
-                                    }}
-                                >
-                                    Points Only
-                                </button> */}
-                                <button
-                                    onClick={() => setPaymentChoice("BOTH")}
-                                    disabled={loyaltyCard.pointsBalance === 0}
-                                    style={{
-                                        padding: '12px', borderRadius: '12px', border: paymentChoice === 'BOTH' ? '2px solid #6366f1' : '1px solid #e5e7eb',
-                                        background: paymentChoice === 'BOTH' ? 'rgba(99, 102, 241, 0.05)' : 'white', cursor: 'pointer', fontWeight: '600',
-                                        opacity: loyaltyCard.pointsBalance === 0 ? 0.5 : 1
-                                    }}
-                                >
-                                    Both
-                                </button>
-                            </div>
-
-                            {paymentChoice === "BOTH" && (
-                                <div style={{ marginTop: '20px', padding: '15px', background: '#f9fafb', borderRadius: '12px' }}>
-                                    <label style={{ display: 'block', fontSize: '0.85rem', color: '#4b5563', marginBottom: '8px' }}>
-                                        Enter points to redeem (Max {maxPointsPossible}):
-                                    </label>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <input
-                                            type="number"
-                                            value={pointsToUse}
-                                            onChange={(e) => handlePointsChange(e.target.value)}
-                                            style={{
-                                                flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #d1d5db',
-                                                fontSize: '1rem', outline: 'none'
-                                            }}
-                                        />
-                                        <button onClick={() => setPointsToUse(maxPointsPossible)} style={{
-                                            padding: '10px 15px', borderRadius: '8px', border: 'none', background: '#6366f1', color: 'white', fontWeight: '600', cursor: 'pointer'
-                                        }}>
-                                            Max
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
                     <div style={{
                         marginTop: '50px', padding: '25px', borderRadius: '24px', background: 'rgba(99, 102, 241, 0.05)',
                         display: 'flex', alignItems: 'center', gap: '20px', border: '1px solid rgba(99, 102, 241, 0.1)'
@@ -416,9 +297,19 @@ const Payment = () => {
                     <h3 className={styles.summaryTitle}>Final Summary</h3>
 
                     <div className={styles.summaryRow}>
-                        <span>Cart Total</span>
+                        <span>Cart Total (Cash)</span>
                         <span>₹{subtotal.toFixed(2)}</span>
                     </div>
+
+                    {totalPointsRedeemed > 0 && (
+                        <div className={styles.summaryRow} style={{ color: '#fbbf24' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <FiGift size={16} /> Points Redeemed
+                            </span>
+                            <span>{totalPointsRedeemed} pts</span>
+                        </div>
+                    )}
+
                     <div className={styles.summaryRow}>
                         <span>Delivery</span>
                         <span style={{ color: delivery === 0 ? '#10b981' : 'white', fontWeight: '700' }}>
@@ -428,7 +319,7 @@ const Payment = () => {
 
                     <div className={`${styles.summaryRow} ${styles.totalRow}`}>
                         <span>Total Payable</span>
-                        <span>₹{finalPayable.toFixed(2)}</span>
+                        <span>₹{totalPayable.toFixed(2)}</span>
                     </div>
 
                     <button
@@ -444,7 +335,7 @@ const Payment = () => {
                         ) : (
                             <>
                                 <FiShoppingBag />
-                                <span>{paymentMode === 'COD' ? 'Confirm Order' : `Pay ₹${finalPayable.toFixed(0)}`}</span>
+                                <span>{paymentMode === 'COD' ? 'Confirm Order' : `Pay ₹${totalPayable.toFixed(0)}`}</span>
                                 <FiArrowRight />
                             </>
                         )}
@@ -456,6 +347,7 @@ const Payment = () => {
                 </div>
             </div>
         </div>
+
     );
 };
 
