@@ -36,5 +36,9 @@ namespace EMart.Models
 
         [Column("points_used")]
         public int PointsUsed { get; set; } = 0;
+
+        [Column("price_type")]
+        [MaxLength(10)]
+        public string PriceType { get; set; } = "MRP";
     }
 }

@@ -78,28 +78,32 @@ namespace EMart.Services
                         }
                     }
 
-                    // 2. AWARD POINTS (10% of cash amount)
-                    // Calculate cash amount: Total - Points Value
-                    // Assuming Points Value = 1 Point = ₹1 (based on generic logic)
-                    // Or simpler: We can recalculate from items where PriceType != "POINTS"
-                    // But OrderItem doesn't store PriceType.
-
-                    // Alternative: Total Amount - Points Used = Cash Amount
-                    decimal cashAmount = Math.Max(0, order.TotalAmount - totalPointsUsed);
-                    int pointsEarned = (int)(cashAmount * 0.10m);
-
-                    if (pointsEarned > 0)
+                    // 2. AWARD POINTS (10% of total product price, excluding delivery)
+                    // ONLY award points if user has an active loyalty card
+                    var loyaltyCard = await _loyaltycardService.GetLoyaltycardByUserIdAsync(payment.UserId);
+                    
+                    if (loyaltyCard != null && (loyaltyCard.IsActive == 'Y' || loyaltyCard.IsActive == 'y'))
                     {
-                        try
+                        // Calculate points ONLY on cash-paid items (exclude POINTS items)
+                        decimal cashPaidAmount = order.Items
+                            .Where(i => i.PriceType != "POINTS")
+                            .Sum(i => i.Price * i.Quantity);
+                        
+                        int pointsEarned = (int)(cashPaidAmount * 0.10m);
+
+                        if (pointsEarned > 0)
                         {
-                            await _loyaltycardService.UpdatePointsAsync(
-                                payment.UserId,
-                                pointsEarned
-                            );
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"Failed to award points: {ex.Message}");
+                            try
+                            {
+                                await _loyaltycardService.UpdatePointsAsync(
+                                    payment.UserId,
+                                    pointsEarned
+                                );
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"Failed to award points: {ex.Message}");
+                            }
                         }
                     }
 

@@ -99,7 +99,7 @@ app.UseAuthorization();
 app.MapControllers();
 
 // ---------------------------------------------------------
-// AUTO-MIGRATION: Add 'points_used' column if missing
+// AUTO-MIGRATION: Add missing columns if they don't exist
 // ---------------------------------------------------------
 using (var scope = app.Services.CreateScope())
 {
@@ -107,16 +107,54 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<EMartDbContext>();
-        // Simple attempt to add the column. Will fail if it exists.
-        // For MySQL:
-        context.Database.ExecuteSqlRaw(
-            "ALTER TABLE orderitem ADD COLUMN points_used INT NOT NULL DEFAULT 0;"
-        );
+        var connection = context.Database.GetDbConnection();
+        await connection.OpenAsync();
+
+        string[] tables = { "orderitem", "cartitem" };
+        foreach (var table in tables)
+        {
+            // Add points_used if missing
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = $@"
+                    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_NAME = '{table}' AND COLUMN_NAME = 'points_used' 
+                    AND TABLE_SCHEMA = DATABASE()";
+                var exists = Convert.ToInt32(await command.ExecuteScalarAsync()) > 0;
+                if (!exists)
+                {
+                    using (var alterCmd = connection.CreateCommand())
+                    {
+                        alterCmd.CommandText = $"ALTER TABLE {table} ADD COLUMN points_used INT NOT NULL DEFAULT 0";
+                        await alterCmd.ExecuteNonQueryAsync();
+                        Console.WriteLine($"✅ Added 'points_used' to {table}");
+                    }
+                }
+            }
+
+            // Add price_type if missing
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = $@"
+                    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_NAME = '{table}' AND COLUMN_NAME = 'price_type' 
+                    AND TABLE_SCHEMA = DATABASE()";
+                var exists = Convert.ToInt32(await command.ExecuteScalarAsync()) > 0;
+                if (!exists)
+                {
+                    using (var alterCmd = connection.CreateCommand())
+                    {
+                        alterCmd.CommandText = $"ALTER TABLE {table} ADD COLUMN price_type VARCHAR(10) DEFAULT 'MRP'";
+                        await alterCmd.ExecuteNonQueryAsync();
+                        Console.WriteLine($"✅ Added 'price_type' to {table}");
+                    }
+                }
+            }
+        }
     }
     catch (Exception ex)
     {
-        // Ignore exception if column already exists or other non-critical DB issue on startup
-        Console.WriteLine($"DB Schema Update: {ex.Message}");
+        Console.WriteLine($"⚠️ DB Schema Update Warning: {ex.Message}");
     }
 }
 
